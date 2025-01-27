@@ -1,8 +1,8 @@
 """initial migrations
 
-Revision ID: 13fa7bb87e74
+Revision ID: b24f519c5de8
 Revises: 
-Create Date: 2025-01-27 10:34:40.283872
+Create Date: 2025-01-27 12:35:38.246646
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '13fa7bb87e74'
+revision = 'b24f519c5de8'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,12 +30,13 @@ def upgrade():
     )
     op.create_table('product',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('NameError', sa.String(length=100), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('price_tag', sa.Float(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=True),
     sa.Column('status', sa.String(length=20), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('bidding_end_time', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], name=op.f('fk_product_user_id_user')),
     sa.PrimaryKeyConstraint('id')
     )
@@ -45,7 +46,8 @@ def upgrade():
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('bidding_time', sa.DateTime(), nullable=False),
+    sa.Column('highest_bid', sa.Float(), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], name=op.f('fk_bids_product_id_product')),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], name=op.f('fk_bids_user_id_user')),
     sa.PrimaryKeyConstraint('id')

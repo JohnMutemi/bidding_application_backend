@@ -113,7 +113,13 @@ class Product(db.Model, SerializerMixin):
     def validate_status(self, key, status):
         if status not in self.STATUS_OPTIONS:
             raise ValueError(f"Invalid status. Must be one of {self.STATUS_OPTIONS}.")
+        elif self.STATUS_OPTIONS=='sold':
+            raise Exception('bids cannot be placed past bidding_end_time')
         return status
+        
+    
+    
+    
 
 
     def to_dict(self):
@@ -160,6 +166,7 @@ class Bid(db.Model):
         if amount <= 0:
             raise ValueError("Bid amount must be positive.")
         return amount
+    
     
     @validates('status')
     def validate_status(self, key, status):
