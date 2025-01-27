@@ -209,7 +209,7 @@ class ProductResource(Resource):
         db.session.commit()
         return {"message": "Product deleted successfully"}, 200
 
-   
+#    login resource
 class Login(Resource):
     def post(self):
         username = request.form.get('username')
@@ -229,14 +229,14 @@ class Login(Resource):
                 'role': user.role  
             }, 200
         return {"error": "Invalid username or password"}, 401
-
+# register resource
 class Register(Resource):
     def post(self):
         data = request.form
         username = data.get('username')
         password = data.get('password')
         email = data.get('email')
-        role = data.get('role', 'customer')  # Default to client role if not provided
+        role = data.get('role', 'customer')  # Default to customer  role if not provided
 
         if not username or not password or not email:
             return {'message': 'username, password, and email are required'}, 400
@@ -263,6 +263,7 @@ class CheckSession(Resource):
             return jsonify(user.to_dict()), 200
         return jsonify({"error": "User not found"}), 404
 
+# logout resource
 class Logout(Resource):
     @jwt_required()
     def post(self):
