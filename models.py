@@ -56,12 +56,12 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Email cannot be empty")
         if len(email) > 120:
             raise ValueError("Email must be 120 characters or less")
-        # Add more complex validation here if needed (e.g., regex for email format)
+        
         return email
 
     @validates('role')
     def validate_role(self, key, role):
-        valid_roles = ['admin', 'writer', 'client']
+        valid_roles = ['admin', 'customer']
         if role not in valid_roles:
             raise ValueError(f"Invalid role. Must be one of {valid_roles}")
         return role
@@ -79,12 +79,13 @@ class Product(db.Model, SerializerMixin):
     __tablename__ = 'product'
 
     id = db.Column(db.Integer, primary_key=True)
-    NameError = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price_tag = db.Column(db.Float, nullable=False)  
     quantity=db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='available')  
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bidding_end_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # Exclude the 'user' field from serialization to avoid recursion
     serialize_rules = ('-user',)
@@ -95,12 +96,12 @@ class Product(db.Model, SerializerMixin):
         return f'<Product {self.name}>'
 
     @validates('name')
-    def validate_title(self, key, title):
-        if not title:
+    def validate_title(self, key, name):
+        if not name:
             raise ValueError("Name cannot be empty.")
-        if len(title) > 30:
+        if len(name) > 30:
             raise ValueError("Name must be 30 characters or less.")
-        return title
+        return name
 
     @validates('price_tag')
     def validate_price(self, key, price_tag):
@@ -123,8 +124,10 @@ class Product(db.Model, SerializerMixin):
             'name': self.title,
             'description': self.description,
             'price_tag': self.price_tag,
+            'quantity':self.quantity,
             'status': self.status,
             'user_id': self.user_id,
+            'bidding_end_time':self.bidding_end_time.isoformat()
         }
 
 
@@ -136,7 +139,8 @@ class Bid(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='pending') 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    bidding_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    highest_bid=db.Column(db.Float, nullable=False)
 
     # Define relationships
     user = db.relationship('User', backref='bids', lazy=True)  
@@ -150,7 +154,7 @@ class Bid(db.Model):
     @validates('amount')
     def validate_amount(self, key, amount):
         try:
-            amount = float(amount)  # Ensure amount is a float
+            amount = float(amount)  
         except ValueError:
             raise ValueError("Bid amount must be a valid number.")
         
@@ -167,7 +171,7 @@ class Bid(db.Model):
         return status
 
     def to_dict(self):
-        """Convert the bid to a dictionary for JSON serialization."""
+        # Convert the bid to a dictionary for JSON serialization.
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -176,5 +180,6 @@ class Bid(db.Model):
             'product_name': self.product.name if self.product else 'Unknown',  
             'amount': self.amount,
             'status': self.status,
-            'sold_at': self.created_at.isoformat()
+            'bidding_time': self.bidding_time.isoformat(),
+            'highest_bid':self.highest_bid
         }

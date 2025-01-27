@@ -92,13 +92,15 @@ class BiddingResource(Resource):
         data = request.get_json()
         product_id = data.get('product_id')
         amount = data.get('amount')
+        bidding_time=data.get('bidding_time')
+        highest_bid=data.get('highest_bid')
 
         # Validate if the product exists and is available
         product = Product.query.get(product_id)
         if not product or product.status != 'available':
             return {"message": "Product not available for bidding."}, 400
 
-        bid = Bid(user_id=user_id, product_id=product_id, amount=amount)
+        bid = Bid(user_id=user_id, product_id=product_id, amount=amount, bidding_time=bidding_time, highest_bid=highest_bid)
         db.session.add(bid)
         db.session.commit()
 
@@ -114,6 +116,8 @@ class ProductResource(Resource):
         name = request.form.get('name')
         description = request.form.get('description')
         price_tag = request.form.get('price_tag')
+        quantity=request.form.get('quantity')
+        bidding_end_time=request.form.get('bidding_end_time')
        
         if not all([name, description, price_tag]):
             return {"message": "All fields are required"}, 400
@@ -127,7 +131,9 @@ class ProductResource(Resource):
             name=name,
             description=description,
             price_tag=price_tag,
-            user_id=user_id
+            user_id=user_id,
+            quantity=quantity,
+            bidding_end_time=bidding_end_time
         )
 
         db.session.add(new_product)
@@ -136,6 +142,7 @@ class ProductResource(Resource):
         return new_product.to_dict(), 201
     
     @jwt_required()
+    # a logged in user can view all products
     def get(self, product_id=None):
         if product_id:
             product = Product.query.get(product_id)
@@ -147,7 +154,7 @@ class ProductResource(Resource):
         query = Product.query
         if status:
             query = query.filter_by(status=status)
-        products = query.all()
+            products = query.all()
         return jsonify([product.to_dict() for product in products])
 
     @jwt_required()
@@ -166,6 +173,8 @@ class ProductResource(Resource):
         name = request.form.get('title', product.name)
         description = request.form.get('description', product.description)
         price_tag = request.form.get('price_tag', product.price_tag)
+        quantity=request.form.get('quantity', product.quantity)
+        bidding_end_time=request.form.get('bidding_end_time', product.bidding_end_time)
         
 
         try:
@@ -177,7 +186,8 @@ class ProductResource(Resource):
         product.name = name
         product.description = description
         product.price_tag = price_tag
-        
+        product.quantity=quantity
+        product.bidding_end_time=bidding_end_time
 
         db.session.commit()
         return product.to_dict(), 200
@@ -269,4 +279,4 @@ api.add_resource(CheckSession, '/session')
 api.add_resource(Logout, '/logout')
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5555, debug=True)
