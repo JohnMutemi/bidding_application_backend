@@ -47,10 +47,7 @@ def handle_not_found(e):
 
 app.register_error_handler(404, handle_not_found)
 
-# Routes and resources
-@app.route('/')
-def index():
-    return render_template('index.html')
+
 
 class UserResource(Resource):
     @role_required(['admin'])  # Only admin can view all users
@@ -89,155 +86,120 @@ class BiddingResource(Resource):
         bids = Bid.query.all()
         return [bid.to_dict() for bid in bids], 200
 
-    @role_required(['writer'])  # Only writers can post bids
+    @role_required(['customer'])  # Only customers can post bids
     def post(self):
         user_id = get_jwt_identity()['user_id']
         data = request.get_json()
-        assignment_id = data.get('assignment_id')
+        product_id = data.get('product_id')
         amount = data.get('amount')
 
-        # Validate the assignment exists and is available
-        assignment = Assignment.query.get(assignment_id)
-        if not assignment or assignment.status != 'available':
-            return {"message": "Assignment not available for bidding."}, 400
+        # Validate if the product exists and is available
+        product = Product.query.get(product_id)
+        if not product or product.status != 'available':
+            return {"message": "Product not available for bidding."}, 400
 
-        bid = Bid(user_id=user_id, assignment_id=assignment_id, amount=amount)
+        bid = Bid(user_id=user_id, product_id=product_id, amount=amount)
         db.session.add(bid)
         db.session.commit()
 
         return bid.to_dict(), 201
-class AssignmentResource(Resource):
+    
+class ProductResource(Resource):
     @jwt_required()
-    @role_required(['client'])  # Only clients can create assignments
+    @role_required(['admin'])  # Only addmins can add new products
     def post(self):
         user_identity = get_jwt_identity()
         user_id = user_identity.get('user_id')
 
-        title = request.form.get('title')
+        name = request.form.get('name')
         description = request.form.get('description')
         price_tag = request.form.get('price_tag')
-        pages = request.form.get('pages')
-        reference_style = request.form.get('reference_style')
-        due_date = request.form.get('due_date')
-
-        if not all([title, description, price_tag, pages, reference_style, due_date]):
+       
+        if not all([name, description, price_tag]):
             return {"message": "All fields are required"}, 400
 
         try:
             price_tag = float(price_tag)
-            pages = int(pages)
-            due_date = datetime.strptime(due_date, '%Y-%m-%d')
         except ValueError:
-            return {"message": "Invalid value for price tag, pages, or due date"}, 400
+            return {"message": "Invalid value for price tag"}, 400
 
-        new_assignment = Assignment(
-            title=title,
+        new_product = Product(
+            name=name,
             description=description,
             price_tag=price_tag,
-            pages=pages,
-            reference_style=reference_style,
-            due_date=due_date,
             user_id=user_id
         )
 
-        db.session.add(new_assignment)
+        db.session.add(new_product)
         db.session.commit()
 
-        return new_assignment.to_dict(), 201
+        return new_product.to_dict(), 201
     
     @jwt_required()
-    def get(self, assignment_id=None):
-        if assignment_id:
-            assignment = Assignment.query.get(assignment_id)
-            if not assignment:
-                return {"message": "Assignment not found"}, 404
-            return assignment.to_dict(), 200
+    def get(self, product_id=None):
+        if product_id:
+            product = Product.query.get(product_id)
+            if not product:
+                return {"message": "Product not found"}, 404
+            return product.to_dict(), 200
 
         status = request.args.get('status')
-        query = Assignment.query
+        query = Product.query
         if status:
             query = query.filter_by(status=status)
-        assignments = query.all()
-        return jsonify([assignment.to_dict() for assignment in assignments])
+        products = query.all()
+        return jsonify([product.to_dict() for product in products])
 
     @jwt_required()
-    @role_required(['client'])  # Only clients can update assignments
-    def put(self, assignment_id):
+    @role_required(['admin'])  # Only admins can update products
+    def put(self, product_id):
         user_identity = get_jwt_identity()
         user_id = user_identity.get('user_id')
 
-        assignment = Assignment.query.get(assignment_id)
-        if not assignment:
-            return {"message": "Assignment not found"}, 404
+        product = Product.query.get(product_id)
+        if not product:
+            return {"message": "Product not found"}, 404
 
-        if assignment.user_id != user_id:
-            return {"message": "You are not authorized to update this assignment"}, 403
+        if product.user_id != user_id:
+            return {"message": "You are not authorized to update this product"}, 403
 
-        title = request.form.get('title', assignment.title)
-        description = request.form.get('description', assignment.description)
-        price_tag = request.form.get('price_tag', assignment.price_tag)
-        pages = request.form.get('pages', assignment.pages)
-        reference_style = request.form.get('reference_style', assignment.reference_style)
-        due_date = request.form.get('due_date', assignment.due_date)
+        name = request.form.get('title', product.name)
+        description = request.form.get('description', product.description)
+        price_tag = request.form.get('price_tag', product.price_tag)
+        
 
         try:
             if price_tag:
                 price_tag = float(price_tag)
-            if pages:
-                pages = int(pages)
-            if due_date:
-                due_date = datetime.strptime(due_date, '%Y-%m-%d')
         except ValueError:
             return {"message": "Invalid value for price tag, pages, or due date"}, 400
 
-        assignment.title = title
-        assignment.description = description
-        assignment.price_tag = price_tag
-        assignment.pages = pages
-        assignment.reference_style = reference_style
-        assignment.due_date = due_date
+        product.name = name
+        product.description = description
+        product.price_tag = price_tag
+        
 
         db.session.commit()
-        return assignment.to_dict(), 200
+        return product.to_dict(), 200
 
     @jwt_required()
-    @role_required(['client'])  # Only clients can delete assignments
-    def delete(self, assignment_id):
+    @role_required(['admin'])  # Only admins can delete products
+    def delete(self, product_id):
         user_identity = get_jwt_identity()
         user_id = user_identity.get('user_id')
 
-        assignment = Assignment.query.get(assignment_id)
-        if not assignment:
-            return {"message": "Assignment not found"}, 404
+        product = Product.query.get(product_id)
+        if not product:
+            return {"message": "Product not found"}, 404
 
-        if assignment.user_id != user_id:
-            return {"message": "You are not authorized to delete this assignment"}, 403
+        if product.user_id != user_id:
+            return {"message": "You are not authorized to delete this product"}, 403
 
-        db.session.delete(assignment)
+        db.session.delete(product)
         db.session.commit()
-        return {"message": "Assignment deleted successfully"}, 200
+        return {"message": "Product deleted successfully"}, 200
 
-    @jwt_required()
-    @role_required(['writer', 'client'])
-    @app.route('/assignments/upload/<int:assignment_id>', methods=['POST'])  
-    def post_file_upload(self, assignment_id):
-        assignment = Assignment.query.get(assignment_id)
-        if not assignment:
-            return {"message": "Assignment not found"}, 404
-
-        if assignment.status != 'in_progress':
-            return {"message": "Files can only be uploaded for assignments in progress."}, 400
-
-        if 'file' not in request.files:
-            return {"message": "No file part"}, 400
-
-        file = request.files['file']
-        if file.filename == '':
-            return {"message": "No selected file"}, 400
-        file_path = f"/path/to/save/{file.filename}"  
-        file.save(file_path)
-
-        return {"message": "File uploaded successfully"}, 201
+   
 class Login(Resource):
     def post(self):
         username = request.form.get('username')
@@ -254,7 +216,7 @@ class Login(Resource):
                 'username': user.username,
                 'email': user.email,
                 'user_id': user.id,
-                'role': user.role  # Include role in response
+                'role': user.role  
             }, 200
         return {"error": "Invalid username or password"}, 401
 
@@ -264,7 +226,7 @@ class Register(Resource):
         username = data.get('username')
         password = data.get('password')
         email = data.get('email')
-        role = data.get('role', 'writer')  # Default to client role if not provided
+        role = data.get('role', 'customer')  # Default to client role if not provided
 
         if not username or not password or not email:
             return {'message': 'username, password, and email are required'}, 400
@@ -299,7 +261,7 @@ class Logout(Resource):
 
 # Register API endpoints
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
-api.add_resource(ProductResource, '/products', '/products/<int:product_id>', '/products/upload/<int:product_id>')
+api.add_resource(ProductResource, '/products', '/products/<int:product_id>')
 api.add_resource(BiddingResource, '/bids')
 api.add_resource(Login, '/login')
 api.add_resource(Register, '/register')
