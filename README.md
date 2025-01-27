@@ -17,6 +17,10 @@ The admin, being the overall overseer of the application, has the rights to add,
 
 ## Usage
 
-1. export FLASK_APP=app.py
-2. configure your port[export FLASK_RUN_PORT=5555]
-3. Run the application locally[flask run]
+1. initialize database [flask db init]
+2. make migrations [flask db migrate -m"initial migrations"]
+3. update the database [flask db upgrade head]
+4. Seed any data if applicable for development environment [python seed.py]
+5. To run the application, export the FLASK_App[export FLASK_APP=app.py]
+6. configure port [export FLASK_RUN_PORT=5555]
+7. Run the application locally[flask run]

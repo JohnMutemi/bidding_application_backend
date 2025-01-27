@@ -12,7 +12,7 @@ metadata = MetaData(naming_convention={
 db = SQLAlchemy(metadata=metadata)
 
 
-
+# user model
 class User(db.Model, SerializerMixin):
     __tablename__ = 'user'
 
@@ -74,7 +74,7 @@ class User(db.Model, SerializerMixin):
             'role': self.role, 
         }
 
-
+# product model
 class Product(db.Model, SerializerMixin):
     __tablename__ = 'product'
 
@@ -96,13 +96,12 @@ class Product(db.Model, SerializerMixin):
         return f'<Product {self.name}>'
 
     @validates('name')
-    def validate_title(self, key, name):
+    def validate_name(self, key, name):
         if not name:
             raise ValueError("Name cannot be empty.")
         if len(name) > 30:
             raise ValueError("Name must be 30 characters or less.")
         return name
-
     @validates('price_tag')
     def validate_price(self, key, price_tag):
         if price_tag <= 0:
@@ -118,10 +117,10 @@ class Product(db.Model, SerializerMixin):
 
 
     def to_dict(self):
-        """Convert the product to a dictionary for JSON serialization."""
+        # Convert the product to a dictionary for JSON serialization.
         return {
             'id': self.id,
-            'name': self.title,
+            'name': self.name,
             'description': self.description,
             'price_tag': self.price_tag,
             'quantity':self.quantity,
@@ -161,9 +160,7 @@ class Bid(db.Model):
         if amount <= 0:
             raise ValueError("Bid amount must be positive.")
         return amount
-
-
-
+    
     @validates('status')
     def validate_status(self, key, status):
         if status not in self.STATUS_OPTIONS:
